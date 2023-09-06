@@ -63,6 +63,7 @@ const resolveViteConfig = (ctx, task) => {
       rollupOptions: {
         external,
         output: {
+          interop: 'compat',
           chunkFileNames() {
             const parts = outputExt.split('.');
 
