@@ -32,6 +32,15 @@ const resolveViteConfig = (ctx, task) => {
     logLevel: 'warn',
     clearScreen: false,
     customLogger,
+    /**
+     * TODO: should this not exist and instead the plugins
+     * that are using should define it? we don't have a config atm...
+     */
+    esbuild: {
+      loader: 'jsx',
+      include: /.*\.jsx?$/,
+      exclude: [],
+    },
     build: {
       sourcemap: true,
       /**
