@@ -4,12 +4,12 @@ import packageJSON from '../../../../../package.json';
 
 import checkLatestStrapiVersion from './checkLatestStrapiVersion';
 
-const strapiVersion = packageJSON.version;
-const showUpdateNotif = !JSON.parse(localStorage.getItem('STRAPI_UPDATE_NOTIF'));
-const { get } = getFetchClient();
-
 const fetchStrapiLatestRelease = async (toggleNotification) => {
+  const strapiVersion = packageJSON.version;
+
   try {
+    const showUpdateNotif = !JSON.parse(localStorage.getItem('STRAPI_UPDATE_NOTIF'));
+
     const res = await fetch('https://api.github.com/repos/strapi/strapi/releases/latest');
 
     if (!res.ok) {
@@ -42,6 +42,7 @@ const fetchStrapiLatestRelease = async (toggleNotification) => {
 
 const fetchAppInfo = async () => {
   try {
+    const { get } = getFetchClient();
     const { data, headers } = await get('/admin/information');
 
     if (!headers['content-type'].includes('application/json')) {
@@ -56,6 +57,7 @@ const fetchAppInfo = async () => {
 
 const fetchCurrentUserPermissions = async () => {
   try {
+    const { get } = getFetchClient();
     const { data, headers } = await get('/admin/users/me/permissions');
 
     if (!headers['content-type'].includes('application/json')) {
@@ -70,6 +72,7 @@ const fetchCurrentUserPermissions = async () => {
 
 const fetchUserRoles = async () => {
   try {
+    const { get } = getFetchClient();
     const {
       data: {
         data: { roles },

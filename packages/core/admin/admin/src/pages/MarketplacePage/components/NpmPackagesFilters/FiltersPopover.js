@@ -78,7 +78,7 @@ const FiltersPopover = ({
 
 FiltersPopover.propTypes = {
   onToggle: PropTypes.func.isRequired,
-  source: PropTypes.shape({ current: PropTypes.instanceOf(Element) }).isRequired,
+  source: PropTypes.shape({ current: PropTypes.node }).isRequired,
   query: PropTypes.object.isRequired,
   npmPackageType: PropTypes.oneOf(['plugin', 'provider']).isRequired,
   possibleCollections: PropTypes.object.isRequired,

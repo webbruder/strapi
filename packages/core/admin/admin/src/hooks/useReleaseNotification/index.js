@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 
 import { useAppInfo, useNotification } from '@strapi/helper-plugin';
 
-const showUpdateNotif = !JSON.parse(localStorage.getItem('STRAPI_UPDATE_NOTIF'));
-
 const useReleaseNotification = () => {
   const { latestStrapiReleaseTag, shouldUpdateStrapi } = useAppInfo();
   const toggleNotification = useNotification();
 
   useEffect(() => {
+    const showUpdateNotif = !JSON.parse(localStorage.getItem('STRAPI_UPDATE_NOTIF'));
+
     if (shouldUpdateStrapi && showUpdateNotif) {
       toggleNotification({
         type: 'info',

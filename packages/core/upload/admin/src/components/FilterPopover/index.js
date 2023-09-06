@@ -262,7 +262,7 @@ FilterPopover.propTypes = {
   filters: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onToggle: PropTypes.func.isRequired,
-  source: PropTypes.shape({ current: PropTypes.instanceOf(Element) }).isRequired,
+  source: PropTypes.shape({ current: PropTypes.node }).isRequired,
 };
 
 export default FilterPopover;

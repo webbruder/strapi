@@ -215,7 +215,7 @@ FilterPopoverURLQuery.propTypes = {
   isVisible: PropTypes.bool.isRequired,
   onBlur: PropTypes.func,
   onToggle: PropTypes.func.isRequired,
-  source: PropTypes.shape({ current: PropTypes.instanceOf(Element) }).isRequired,
+  source: PropTypes.shape({ current: PropTypes.node }).isRequired,
 };
 
 const SelectContainers = styled(Flex)`
