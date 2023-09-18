@@ -107,15 +107,15 @@ const createCoreStore = ({ db }) => {
             type: typeof newData,
           },
         });
+      } else if (!oldData) {
+        return db.query('strapi::core-store').create({
+          data: {
+            ...where,
+            value: newData,
+            type: typeof newData,
+          },
+        });
       }
-
-      return db.query('strapi::core-store').create({
-        data: {
-          ...where,
-          value: newData,
-          type: typeof newData,
-        },
-      });
     },
 
     /**
