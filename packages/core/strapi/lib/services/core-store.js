@@ -95,14 +95,16 @@ const createCoreStore = ({ db }) => {
         tag: tag || null,
       };
 
-      const data = await db.query('strapi::core-store').findOne({ where });
+      const oldData = await db.query('strapi::core-store').findOne({ where });
+      console.log(oldData);
+      const newData = JSON.stringify(value) || value.toString();
 
-      if (data) {
+      if (oldData && oldData.value !== newData) {
         return db.query('strapi::core-store').update({
-          where: { id: data.id },
+          where: { id: oldData.id },
           data: {
-            value: JSON.stringify(value) || value.toString(),
-            type: typeof value,
+            value: newData,
+            type: typeof newData,
           },
         });
       }
@@ -110,8 +112,8 @@ const createCoreStore = ({ db }) => {
       return db.query('strapi::core-store').create({
         data: {
           ...where,
-          value: JSON.stringify(value) || value.toString(),
-          type: typeof value,
+          value: newData,
+          type: typeof newData,
         },
       });
     },
