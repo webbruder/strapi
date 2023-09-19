@@ -464,6 +464,7 @@ const FormModal = () => {
         'minLength',
         'regex',
         'default',
+        'targetField',
       ];
 
       let val;
