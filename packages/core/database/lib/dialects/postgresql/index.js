@@ -4,6 +4,8 @@ const errors = require('../../errors');
 const { Dialect } = require('../dialect');
 const PostgresqlSchemaInspector = require('./schema-inspector');
 
+const schemaNamePattern = /^[a-zA-Z_][a-zA-Z0-9_\s]*$/;
+
 class PostgresDialect extends Dialect {
   constructor(db) {
     super(db);
@@ -15,7 +17,7 @@ class PostgresDialect extends Dialect {
     return true;
   }
 
-  async initialize() {
+  async initialize(nativeConnection) {
     // Don't cast DATE string to Date()
     this.db.connection.client.driver.types.setTypeParser(
       this.db.connection.client.driver.types.builtins.DATE,
@@ -33,6 +35,18 @@ class PostgresDialect extends Dialect {
       'text',
       parseFloat
     );
+
+    // If we're using a schema, set the default path for all table names in queries to use that schema
+    const schemaName = this.db.connection.getSchemaName();
+    // Avoid running potentially dangerous schemaNames in our raw query
+    if (!schemaNamePattern.test(schemaName)) {
+      throw new Error('Invalid postgres schema name');
+    }
+    if (schemaName) {
+      await this.db.connection
+        .raw(`SET search_path TO "${schemaName}"`)
+        .connection(nativeConnection);
+    }
   }
 
   usesForeignKeys() {
