@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
+
 import Cropper from 'cropperjs';
-import { useRef, useEffect, useState } from 'react';
 
 const QUALITY = 1;
 
@@ -52,7 +53,7 @@ export const useCropImg = () => {
       if (!cropperRef.current) {
         reject(
           new Error(
-            'The cropper has not been instanciated: make sure to call the crop() function before calling produceFile().'
+            'The cropper has not been instantiated: make sure to call the crop() function before calling produceFile().'
           )
         );
       } else {

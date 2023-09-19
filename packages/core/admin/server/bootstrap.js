@@ -1,6 +1,7 @@
 'use strict';
 
-const { merge } = require('lodash/fp');
+const { merge, map, difference, uniq } = require('lodash/fp');
+const { pipeAsync } = require('@strapi/utils');
 const { getService } = require('./utils');
 const adminActions = require('./config/admin-actions');
 const adminConditions = require('./config/admin-conditions');
@@ -9,6 +10,7 @@ const defaultAdminAuthSettings = {
   providers: {
     autoRegister: false,
     defaultRole: null,
+    ssoLockedRoles: null,
   },
 };
 
@@ -52,7 +54,23 @@ const syncAuthSettings = async () => {
   await adminStore.set({ key: 'auth', value: newAuthSettings });
 };
 
-module.exports = async () => {
+const syncAPITokensPermissions = async () => {
+  const validPermissions = strapi.contentAPI.permissions.providers.action.keys();
+  const permissionsInDB = await pipeAsync(
+    strapi.query('admin::api-token-permission').findMany,
+    map('action')
+  )();
+
+  const unknownPermissions = uniq(difference(permissionsInDB, validPermissions));
+
+  if (unknownPermissions.length > 0) {
+    await strapi
+      .query('admin::api-token-permission')
+      .deleteMany({ where: { action: { $in: unknownPermissions } } });
+  }
+};
+
+module.exports = async ({ strapi }) => {
   await registerAdminConditions();
   await registerPermissionActions();
   registerModelHooks();
@@ -61,19 +79,23 @@ module.exports = async () => {
   const userService = getService('user');
   const roleService = getService('role');
   const apiTokenService = getService('api-token');
+  const transferService = getService('transfer');
   const tokenService = getService('token');
 
   await roleService.createRolesIfNoneExist();
   await roleService.resetSuperAdminPermissions();
   await roleService.displayWarningIfNoSuperAdmin();
 
-  await permissionService.ensureBoundPermissionsInDatabase();
   await permissionService.cleanPermissionsInDatabase();
 
   await userService.displayWarningIfUsersDontHaveRole();
 
   await syncAuthSettings();
+  await syncAPITokensPermissions();
+
+  getService('metrics').startCron(strapi);
 
   apiTokenService.checkSaltIsDefined();
+  transferService.token.checkSaltIsDefined();
   tokenService.checkSecretIsDefined();
 };

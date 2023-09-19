@@ -1,15 +1,26 @@
 'use strict';
 
-const { pipe, omit, pick } = require('lodash/fp');
+const { pipe, omit, pick, isEmpty } = require('lodash/fp');
 
 const { createController } = require('./core-api/controller');
 const { createService } = require('./core-api/service');
 const { createRoutes } = require('./core-api/routes');
 
+// Content type is proxied to allow for dynamic content type updates
+const getContentTypeProxy = (strapi, uid) => {
+  return new Proxy(strapi.contentType(uid), {
+    get(target, prop) {
+      const contentType = strapi.contentType(uid);
+      return contentType[prop];
+    },
+  });
+};
+
 const createCoreController = (uid, cfg = {}) => {
   return ({ strapi }) => {
     const baseController = createController({
-      contentType: strapi.contentType(uid),
+      contentType: getContentTypeProxy(strapi, uid),
+      isCustom: !isEmpty(cfg)
     });
 
     const userCtrl = typeof cfg === 'function' ? cfg({ strapi }) : cfg;
@@ -28,7 +39,7 @@ const createCoreController = (uid, cfg = {}) => {
 const createCoreService = (uid, cfg = {}) => {
   return ({ strapi }) => {
     const baseService = createService({
-      contentType: strapi.contentType(uid),
+      contentType: getContentTypeProxy(strapi, uid),
     });
 
     const userService = typeof cfg === 'function' ? cfg({ strapi }) : cfg;
@@ -45,13 +56,12 @@ const createCoreService = (uid, cfg = {}) => {
 };
 
 const createCoreRouter = (uid, cfg = {}) => {
-  const { prefix, config = {}, only, except } = cfg;
+  const { prefix, config = {}, only, except, type } = cfg;
   let routes;
 
   return {
-    get prefix() {
-      return prefix;
-    },
+    type,
+    prefix,
     get routes() {
       if (!routes) {
         const contentType = strapi.contentType(uid);

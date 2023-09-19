@@ -1,17 +1,23 @@
 import React from 'react';
+
+import {
+  AutoReloadOverlayBlockerProvider,
+  CustomFieldsProvider,
+  LibraryProvider,
+  NotificationsProvider,
+  OverlayBlockerProvider,
+  StrapiAppProvider,
+} from '@strapi/helper-plugin';
 import PropTypes from 'prop-types';
-import { QueryClientProvider, QueryClient } from 'react-query';
-import { LibraryProvider, StrapiAppProvider } from '@strapi/helper-plugin';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import { Provider } from 'react-redux';
+
 import { AdminContext } from '../../contexts';
 import ConfigurationsProvider from '../ConfigurationsProvider';
-import LanguageProvider from '../LanguageProvider';
 import GuidedTour from '../GuidedTour';
-import AutoReloadOverlayBlockerProvider from '../AutoReloadOverlayBlockerProvider';
-import Notifications from '../Notifications';
-import OverlayBlocker from '../OverlayBlocker';
-import ThemeToggleProvider from '../ThemeToggleProvider';
+import LanguageProvider from '../LanguageProvider';
 import Theme from '../Theme';
+import ThemeToggleProvider from '../ThemeToggleProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +31,7 @@ const Providers = ({
   authLogo,
   children,
   components,
+  customFields,
   fields,
   getAdminInjectedComponents,
   getPlugin,
@@ -43,44 +50,46 @@ const Providers = ({
   themes,
 }) => {
   return (
-    <ThemeToggleProvider themes={themes}>
-      <Theme>
-        <QueryClientProvider client={queryClient}>
-          <Provider store={store}>
-            <AdminContext.Provider value={{ getAdminInjectedComponents }}>
-              <ConfigurationsProvider
-                authLogo={authLogo}
-                menuLogo={menuLogo}
-                showReleaseNotification={showReleaseNotification}
-                showTutorials={showTutorials}
-              >
-                <StrapiAppProvider
-                  getPlugin={getPlugin}
-                  menu={menu}
-                  plugins={plugins}
-                  runHookParallel={runHookParallel}
-                  runHookWaterfall={runHookWaterfall}
-                  runHookSeries={runHookSeries}
-                  settings={settings}
+    <LanguageProvider messages={messages} localeNames={localeNames}>
+      <ThemeToggleProvider themes={themes}>
+        <Theme>
+          <QueryClientProvider client={queryClient}>
+            <Provider store={store}>
+              <AdminContext.Provider value={{ getAdminInjectedComponents }}>
+                <ConfigurationsProvider
+                  authLogo={authLogo}
+                  menuLogo={menuLogo}
+                  showReleaseNotification={showReleaseNotification}
+                  showTutorials={showTutorials}
                 >
-                  <LibraryProvider components={components} fields={fields}>
-                    <LanguageProvider messages={messages} localeNames={localeNames}>
-                      <AutoReloadOverlayBlockerProvider>
-                        <OverlayBlocker>
-                          <GuidedTour>
-                            <Notifications>{children}</Notifications>
-                          </GuidedTour>
-                        </OverlayBlocker>
-                      </AutoReloadOverlayBlockerProvider>
-                    </LanguageProvider>
-                  </LibraryProvider>
-                </StrapiAppProvider>
-              </ConfigurationsProvider>
-            </AdminContext.Provider>
-          </Provider>
-        </QueryClientProvider>
-      </Theme>
-    </ThemeToggleProvider>
+                  <StrapiAppProvider
+                    getPlugin={getPlugin}
+                    menu={menu}
+                    plugins={plugins}
+                    runHookParallel={runHookParallel}
+                    runHookWaterfall={runHookWaterfall}
+                    runHookSeries={runHookSeries}
+                    settings={settings}
+                  >
+                    <LibraryProvider components={components} fields={fields}>
+                      <CustomFieldsProvider customFields={customFields}>
+                        <AutoReloadOverlayBlockerProvider>
+                          <OverlayBlockerProvider>
+                            <GuidedTour>
+                              <NotificationsProvider>{children}</NotificationsProvider>
+                            </GuidedTour>
+                          </OverlayBlockerProvider>
+                        </AutoReloadOverlayBlockerProvider>
+                      </CustomFieldsProvider>
+                    </LibraryProvider>
+                  </StrapiAppProvider>
+                </ConfigurationsProvider>
+              </AdminContext.Provider>
+            </Provider>
+          </QueryClientProvider>
+        </Theme>
+      </ThemeToggleProvider>
+    </LanguageProvider>
   );
 };
 
@@ -88,6 +97,7 @@ Providers.propTypes = {
   authLogo: PropTypes.oneOfType([PropTypes.string, PropTypes.any]).isRequired,
   children: PropTypes.element.isRequired,
   components: PropTypes.object.isRequired,
+  customFields: PropTypes.object.isRequired,
   fields: PropTypes.object.isRequired,
   getAdminInjectedComponents: PropTypes.func.isRequired,
   getPlugin: PropTypes.func.isRequired,

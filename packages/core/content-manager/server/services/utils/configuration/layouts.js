@@ -1,50 +1,38 @@
 'use strict';
 
 const _ = require('lodash');
+const { getService } = require('../../../utils');
 const { isListable, hasEditableAttribute, hasRelationAttribute } = require('./attributes');
 
 const DEFAULT_LIST_LENGTH = 4;
 const MAX_ROW_SIZE = 12;
-const FIELD_TYPES_FULL_SIZE = ['dynamiczone', 'component', 'json', 'richtext'];
-const FIELD_TYPES_SMALL = [
-  'checkbox',
-  'boolean',
-  'date',
-  'time',
-  'biginteger',
-  'decimal',
-  'float',
-  'integer',
-  'number',
-];
 
 const isAllowedFieldSize = (type, size) => {
-  if (FIELD_TYPES_FULL_SIZE.includes(type)) {
-    return size === MAX_ROW_SIZE;
+  const { getFieldSize } = getService('field-sizes');
+  const fieldSize = getFieldSize(type);
+
+  // Check if field was locked to another size
+  if (!fieldSize.isResizable && size !== fieldSize.default) {
+    return false;
   }
 
-  // validate, whether the field has 4, 6, 8 or 12 columns?
+  // Otherwise allow unless it's bigger than a row
   return size <= MAX_ROW_SIZE;
 };
 
-const getDefaultFieldSize = (type) => {
-  if (FIELD_TYPES_FULL_SIZE.includes(type)) {
-    return MAX_ROW_SIZE;
-  }
+const getDefaultFieldSize = (attribute) => {
+  const { hasFieldSize, getFieldSize } = getService('field-sizes');
 
-  if (FIELD_TYPES_SMALL.includes(type)) {
-    return MAX_ROW_SIZE / 3;
-  }
-
-  return MAX_ROW_SIZE / 2;
+  // Check if it's a custom field with a custom size and get the default size for the field type
+  return getFieldSize(hasFieldSize(attribute.customField) ? attribute.customField : attribute.type)
+    .default;
 };
 
 async function createDefaultLayouts(schema) {
   return {
     list: createDefaultListLayout(schema),
-    editRelations: createDefaultEditRelationsLayout(schema),
     edit: createDefaultEditLayout(schema),
-    ..._.pick(_.get(schema, ['config', 'layouts'], {}), ['list', 'edit', 'editRelations']),
+    ..._.pick(_.get(schema, ['config', 'layouts'], {}), ['list', 'edit']),
   };
 }
 
@@ -52,12 +40,6 @@ function createDefaultListLayout(schema) {
   return Object.keys(schema.attributes)
     .filter((name) => isListable(schema, name))
     .slice(0, DEFAULT_LIST_LENGTH);
-}
-
-function createDefaultEditRelationsLayout(schema) {
-  if (schema.modelType === 'component') return [];
-
-  return Object.keys(schema.attributes).filter((name) => hasRelationAttribute(schema, name));
 }
 
 const rowSize = (els) => els.reduce((sum, el) => sum + el.size, 0);
@@ -77,9 +59,12 @@ function syncLayouts(configuration, schema) {
 
   let cleanList = list.filter((attr) => isListable(schema, attr));
 
-  let cleanEditRelations = editRelations.filter((attr) => hasRelationAttribute(schema, attr));
+  // TODO V5: remove editRelations
+  const cleanEditRelations = editRelations.filter((attr) => hasRelationAttribute(schema, attr));
 
-  const elementsToReAppend = [];
+  // backward compatibility with when relations were on the side of the layout
+  // it migrates the displayed relations to the main edit layout
+  const elementsToReAppend = [...cleanEditRelations];
   let cleanEdit = [];
   for (const row of edit) {
     const newRow = [];
@@ -87,10 +72,17 @@ function syncLayouts(configuration, schema) {
     for (const el of row) {
       if (!hasEditableAttribute(schema, el.name)) continue;
 
+      // Check if the field is a custom field with a custom size.
+      // If so, use the custom size instead of the type size
+      const { hasFieldSize } = getService('field-sizes');
+      const fieldType = hasFieldSize(schema.attributes[el.name].customField)
+        ? schema.attributes[el.name].customField
+        : schema.attributes[el.name].type;
+
       /* if the type of a field was changed (ex: string -> json) or a new field was added in the schema
          and the new type doesn't allow the size of the previous type, append the field at the end of layouts
       */
-      if (!isAllowedFieldSize(schema.attributes[el.name].type, el.size)) {
+      if (!isAllowedFieldSize(fieldType, el.size)) {
         elementsToReAppend.push(el.name);
         continue;
       }
@@ -122,13 +114,6 @@ function syncLayouts(configuration, schema) {
     );
   }
 
-  // add new relations to layout
-  if (schema.modelType !== 'component') {
-    const newRelations = newAttributes.filter((key) => hasRelationAttribute(schema, key));
-
-    cleanEditRelations = _.uniq(cleanEditRelations.concat(newRelations));
-  }
-
   // add new attributes to edit view
   const newEditAttributes = newAttributes.filter((key) => hasEditableAttribute(schema, key));
 
@@ -137,10 +122,6 @@ function syncLayouts(configuration, schema) {
   return {
     list: cleanList.length > 0 ? cleanList : createDefaultListLayout(schema),
     edit: cleanEdit.length > 0 ? cleanEdit : createDefaultEditLayout(schema),
-    editRelations:
-      editRelations.length === 0 || cleanEditRelations.length > 0
-        ? cleanEditRelations
-        : createDefaultEditRelationsLayout(schema),
   };
 }
 
@@ -156,7 +137,7 @@ const appendToEditLayout = (layout = [], keysToAppend, schema) => {
   for (const key of keysToAppend) {
     const attribute = schema.attributes[key];
 
-    const attributeSize = getDefaultFieldSize(attribute.type);
+    const attributeSize = getDefaultFieldSize(attribute);
     const currenRowSize = rowSize(layout[currentRowIndex]);
 
     if (currenRowSize + attributeSize > MAX_ROW_SIZE) {

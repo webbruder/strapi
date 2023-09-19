@@ -3,7 +3,9 @@ name: 'Nightly Releases'
 on:
   schedule:
     - cron: '0 0 * * 2-6'
-  workflow_dispatch:
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
 
 jobs:
   publish:
@@ -11,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'strapi/strapi'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup npmrc
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - uses: actions/setup-node@v3
@@ -20,5 +22,5 @@ jobs:
       - run: yarn
       - run: ./scripts/pre-publish.sh --yes
         env:
-          VERSION: '0.0.0-${{ github.sha }}'
-          DIST_TAG: experimental
+          VERSION: '0.0.0-next.${{ github.sha }}'
+          DIST_TAG: next

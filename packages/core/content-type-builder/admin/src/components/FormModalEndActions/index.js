@@ -5,10 +5,12 @@
  */
 
 import React from 'react';
-import { useIntl } from 'react-intl';
+
+import { Button } from '@strapi/design-system';
+import { Plus } from '@strapi/icons';
 import PropTypes from 'prop-types';
-import { Button } from '@strapi/design-system/Button';
-import Plus from '@strapi/icons/Plus';
+import { useIntl } from 'react-intl';
+
 import { getTrad } from '../../utils';
 
 const FormModalEndActions = ({
@@ -17,6 +19,7 @@ const FormModalEndActions = ({
   deleteComponent,
   deleteContentType,
   isAttributeModal,
+  isCustomFieldModal,
   isComponentAttribute,
   isComponentToDzModal,
   isContentTypeModal,
@@ -40,7 +43,9 @@ const FormModalEndActions = ({
   onSubmitEditCategory,
   onSubmitEditComponent,
   onSubmitEditContentType,
+  onSubmitEditCustomFieldAttribute,
   onSubmitEditDz,
+  onClickFinish,
 }) => {
   const { formatMessage } = useIntl();
 
@@ -91,6 +96,7 @@ const FormModalEndActions = ({
         onClick={(e) => {
           e.preventDefault();
 
+          onClickFinish();
           onSubmitEditDz(e, false);
         }}
       >
@@ -192,6 +198,7 @@ const FormModalEndActions = ({
           onClick={(e) => {
             e.preventDefault();
 
+            onClickFinish();
             onSubmitAddComponentAttribute(e, false);
           }}
         >
@@ -228,6 +235,7 @@ const FormModalEndActions = ({
           onClick={(e) => {
             e.preventDefault();
 
+            onClickFinish();
             onSubmitEditAttribute(e, false);
           }}
         >
@@ -383,11 +391,49 @@ const FormModalEndActions = ({
     );
   }
 
+  if (isCustomFieldModal) {
+    return (
+      <>
+        <Button
+          type={isEditingAttribute ? 'button' : 'submit'}
+          variant="secondary"
+          onClick={(e) => {
+            e.preventDefault();
+
+            onSubmitEditCustomFieldAttribute(e, true);
+          }}
+          startIcon={<Plus />}
+        >
+          {formatMessage({
+            id: getTrad('form.button.add-field'),
+            defaultMessage: 'Add another field',
+          })}
+        </Button>
+        <Button
+          type={isEditingAttribute ? 'submit' : 'button'}
+          variant="default"
+          onClick={(e) => {
+            e.preventDefault();
+
+            onClickFinish();
+            onSubmitEditCustomFieldAttribute(e, false);
+          }}
+        >
+          {formatMessage({
+            id: 'global.finish',
+            defaultMessage: 'Finish',
+          })}
+        </Button>
+      </>
+    );
+  }
+
   return null;
 };
 
 FormModalEndActions.defaultProps = {
   categoryName: null,
+  onClickFinish() {},
 };
 
 FormModalEndActions.propTypes = {
@@ -396,6 +442,7 @@ FormModalEndActions.propTypes = {
   deleteComponent: PropTypes.func.isRequired,
   deleteContentType: PropTypes.func.isRequired,
   isAttributeModal: PropTypes.bool.isRequired,
+  isCustomFieldModal: PropTypes.bool.isRequired,
   isComponentAttribute: PropTypes.bool.isRequired,
   isComponentModal: PropTypes.bool.isRequired,
   isComponentToDzModal: PropTypes.bool.isRequired,
@@ -419,7 +466,9 @@ FormModalEndActions.propTypes = {
   onSubmitEditCategory: PropTypes.func.isRequired,
   onSubmitEditComponent: PropTypes.func.isRequired,
   onSubmitEditContentType: PropTypes.func.isRequired,
+  onSubmitEditCustomFieldAttribute: PropTypes.func.isRequired,
   onSubmitEditDz: PropTypes.func.isRequired,
+  onClickFinish: PropTypes.func,
 };
 
 export default FormModalEndActions;

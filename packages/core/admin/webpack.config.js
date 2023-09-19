@@ -1,38 +1,33 @@
 'use strict';
 
 const path = require('path');
-const fse = require('fs-extra');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const ForkTsCheckerPlugin = require('fork-ts-checker-webpack-plugin');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { ESBuildMinifyPlugin } = require('esbuild-loader');
 const WebpackBar = require('webpackbar');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const browserslist = require('browserslist');
+const browserslistToEsbuild = require('browserslist-to-esbuild');
 
 const alias = require('./webpack.alias');
 const getClientEnvironment = require('./env');
-
-const EE_REGEX = /from.* ['"]ee_else_ce\//;
+const { createPluginsExcludePath } = require('./utils/plugins');
 
 module.exports = ({
-  cacheDir,
   dest,
   entry,
   env,
   optimize,
-  pluginsPath,
+  plugins,
   options = {
     backend: 'http://localhost:1337',
     adminPath: '/admin/',
     features: [],
   },
-  roots = {
-    eeRoot: './ee/admin',
-    ceRoot: './admin/src',
-  },
   tsConfigFilePath,
+  enforceSourceMaps,
 }) => {
   const isProduction = env === 'production';
 
@@ -49,10 +44,21 @@ module.exports = ({
       ]
     : [];
 
+  const nodeModulePluginPaths = Object.values(plugins)
+    .filter((plugin) => plugin.info?.packageName || plugin.info?.required)
+    .map((plugin) => plugin.pathToPlugin);
+
+  const excludeRegex = createPluginsExcludePath(nodeModulePluginPaths);
+
+  // Ensure we use the config in this directory, even if run with a different
+  // working directory
+  const browserslistConfig = browserslist.loadConfig({ path: __dirname });
+  const buildTarget = browserslistToEsbuild(browserslistConfig);
+
   return {
     mode: isProduction ? 'production' : 'development',
     bail: !!isProduction,
-    devtool: isProduction ? false : 'eval-source-map',
+    devtool: isProduction && !enforceSourceMaps ? false : 'source-map',
     experiments: {
       topLevelAwait: true,
     },
@@ -69,7 +75,7 @@ module.exports = ({
       minimize: optimize,
       minimizer: [
         new ESBuildMinifyPlugin({
-          target: 'es2015',
+          target: buildTarget,
           css: true, // Apply minification to CSS assets
         }),
       ],
@@ -79,94 +85,38 @@ module.exports = ({
     module: {
       rules: [
         {
-          test: /\.tsx?$/,
+          test: /\.(ts|tsx)$/,
           loader: require.resolve('esbuild-loader'),
-          include: [cacheDir, ...pluginsPath],
-          exclude: /node_modules/,
+          exclude: excludeRegex,
           options: {
             loader: 'tsx',
-            target: 'es2015',
+            target: buildTarget,
           },
         },
         {
-          test: /\.m?jsx?$/,
-          include: cacheDir,
-          oneOf: [
-            // Use babel-loader for files that distinct the ee and ce code
-            // These files have an import Something from 'ee_else_ce/
-            {
-              test(filePath) {
-                if (!filePath) {
-                  return false;
-                }
-
-                try {
-                  const fileContent = fse.readFileSync(filePath).toString();
-
-                  if (fileContent.match(/from.* ['"]ee_else_ce\//)) {
-                    return true;
-                  }
-
-                  return EE_REGEX.test(fileContent);
-                } catch (e) {
-                  return false;
-                }
-              },
-              use: {
-                loader: require.resolve('babel-loader'),
-                options: {
-                  cacheDirectory: true,
-                  cacheCompression: isProduction,
-                  compact: isProduction,
-                  presets: [
-                    require.resolve('@babel/preset-env'),
-                    require.resolve('@babel/preset-react'),
-                  ],
-                  plugins: [
-                    [
-                      require.resolve('@strapi/babel-plugin-switch-ee-ce'),
-                      {
-                        // Imported this tells the custom plugin where to look for the ee folder
-                        roots,
-                      },
-                    ],
-
-                    [
-                      require.resolve('@babel/plugin-transform-runtime'),
-                      {
-                        helpers: true,
-                        regenerator: true,
-                      },
-                    ],
-                    [require.resolve('babel-plugin-styled-components'), { pure: true }],
-                  ],
-                },
-              },
-            },
-            // Use esbuild-loader for the other files
-            {
-              use: {
-                loader: require.resolve('esbuild-loader'),
-                options: {
-                  loader: 'jsx',
-                  target: 'es2015',
-                },
-              },
-            },
-          ],
-        },
-        {
-          test: /\.m?jsx?$/,
-          include: pluginsPath,
+          test: /\.(js|jsx|mjs)$/,
+          exclude: excludeRegex,
           use: {
             loader: require.resolve('esbuild-loader'),
             options: {
               loader: 'jsx',
-              target: 'es2015',
+              target: buildTarget,
             },
           },
         },
-
+        /**
+         * This is used to avoid webpack import errors where
+         * the origin is strict EcmaScript Module.
+         *
+         * e. g. a module with javascript mimetype, a '.mjs' file,
+         * or a '.js' file where the package.json contains '"type": "module"'
+         */
+        {
+          test: /\.m?jsx?$/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
         {
           test: /\.css$/i,
           use: ['style-loader', 'css-loader'],
@@ -202,10 +152,7 @@ module.exports = ({
     },
     resolve: {
       alias,
-      symlinks: false,
       extensions: ['.js', '.jsx', '.react.js', '.ts', '.tsx'],
-      mainFields: ['browser', 'jsnext:main', 'main'],
-      modules: ['node_modules', path.resolve(__dirname, 'node_modules')],
     },
     plugins: [
       new HtmlWebpackPlugin({
@@ -214,16 +161,12 @@ module.exports = ({
       }),
       new webpack.DefinePlugin(envVariables),
 
-      new NodePolyfillPlugin(),
-
       new ForkTsCheckerPlugin({
         typescript: {
           configFile: tsConfigFilePath,
         },
       }),
-
       !isProduction && process.env.REACT_REFRESH !== 'false' && new ReactRefreshWebpackPlugin(),
-
       ...webpackPlugins,
     ].filter(Boolean),
   };

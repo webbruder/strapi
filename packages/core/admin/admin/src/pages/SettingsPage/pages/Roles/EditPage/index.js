@@ -1,25 +1,26 @@
 import React, { useRef, useState } from 'react';
+
+import { Box, Button, ContentLayout, Flex, HeaderLayout, Main } from '@strapi/design-system';
 import {
-  request,
+  Link,
+  LoadingIndicatorPage,
+  SettingsPageTitle,
+  useAPIErrorHandler,
+  useFetchClient,
   useNotification,
   useOverlayBlocker,
   useTracking,
-  LoadingIndicatorPage,
-  SettingsPageTitle,
-  Link,
 } from '@strapi/helper-plugin';
-import { Box } from '@strapi/design-system/Box';
-import { Button } from '@strapi/design-system/Button';
-import { ContentLayout, HeaderLayout } from '@strapi/design-system/Layout';
-import { Main } from '@strapi/design-system/Main';
-import { Stack } from '@strapi/design-system/Stack';
+import { ArrowLeft } from '@strapi/icons';
 import { Formik } from 'formik';
-import ArrowLeft from '@strapi/icons/ArrowLeft';
-import get from 'lodash/get';
 import { useIntl } from 'react-intl';
 import { useRouteMatch } from 'react-router-dom';
+
+import { useAdminRolePermissions } from '../../../../../hooks/useAdminRolePermissions';
+import { useAdminRoles } from '../../../../../hooks/useAdminRoles';
+import { useAdminRolePermissionLayout } from '../hooks/useAdminRolePermissionLayout';
+
 import { Permissions, RoleForm } from './components';
-import { useFetchPermissionsLayout, useFetchRole } from '../../../../../hooks';
 import schema from './utils/schema';
 
 const EditPage = () => {
@@ -28,19 +29,37 @@ const EditPage = () => {
   const {
     params: { id },
   } = useRouteMatch('/settings/roles/:id');
+  const { put } = useFetchClient();
   const [isSubmitting, setIsSubmiting] = useState(false);
   const permissionsRef = useRef();
   const { lockApp, unlockApp } = useOverlayBlocker();
   const { trackUsage } = useTracking();
+  const { formatAPIError } = useAPIErrorHandler();
 
-  const { isLoading: isLayoutLoading, data: permissionsLayout } = useFetchPermissionsLayout(id);
+  const { isLoading: isLoadingPermissionsLayout, data: permissionsLayout } =
+    useAdminRolePermissionLayout(id, {
+      cacheTime: 0,
+    });
+
   const {
-    role,
-    permissions: rolePermissions,
+    roles: [role = {}],
     isLoading: isRoleLoading,
-    onSubmitSucceeded,
-  } = useFetchRole(id);
+    refetch: refetchRole,
+  } = useAdminRoles(
+    { id },
+    {
+      cacheTime: 0,
+    }
+  );
 
+  const { permissions, isLoading: isLoadingPermissions } = useAdminRolePermissions(
+    { id },
+    {
+      cacheTime: 0,
+    }
+  );
+
+  // TODO: this should use a react-query mutation
   const handleEditRoleSubmit = async (data) => {
     try {
       lockApp();
@@ -48,17 +67,11 @@ const EditPage = () => {
 
       const { permissionsToSend, didUpdateConditions } = permissionsRef.current.getPermissions();
 
-      await request(`/admin/roles/${id}`, {
-        method: 'PUT',
-        body: data,
-      });
+      await put(`/admin/roles/${id}`, data);
 
       if (role.code !== 'strapi-super-admin') {
-        await request(`/admin/roles/${id}/permissions`, {
-          method: 'PUT',
-          body: {
-            permissions: permissionsToSend,
-          },
+        await put(`/admin/roles/${id}/permissions`, {
+          permissions: permissionsToSend,
         });
 
         if (didUpdateConditions) {
@@ -67,21 +80,17 @@ const EditPage = () => {
       }
 
       permissionsRef.current.setFormAfterSubmit();
-      onSubmitSucceeded({ name: data.name, description: data.description });
+
+      await refetchRole();
 
       toggleNotification({
         type: 'success',
         message: { id: 'notification.success.saved' },
       });
-    } catch (err) {
-      console.error(err.response);
-
-      const errorMessage = get(err, 'response.payload.message', 'An error occured');
-      const message = get(err, 'response.payload.data.permissions[0]', errorMessage);
-
+    } catch (error) {
       toggleNotification({
         type: 'warning',
-        message,
+        message: formatAPIError(error),
       });
     } finally {
       setIsSubmiting(false);
@@ -89,7 +98,7 @@ const EditPage = () => {
     }
   };
 
-  const isFormDisabled = role.code === 'strapi-super-admin';
+  const isFormDisabled = !isRoleLoading && role.code === 'strapi-super-admin';
 
   return (
     <Main>
@@ -108,7 +117,7 @@ const EditPage = () => {
           <form onSubmit={handleSubmit}>
             <HeaderLayout
               primaryAction={
-                <Stack horizontal spacing={2}>
+                <Flex gap={2}>
                   <Button
                     disabled={role.code === 'strapi-super-admin'}
                     onClick={handleSubmit}
@@ -120,7 +129,7 @@ const EditPage = () => {
                       defaultMessage: 'Save',
                     })}
                   </Button>
-                </Stack>
+                </Flex>
               }
               title={formatMessage({
                 id: 'Settings.roles.edit.title',
@@ -140,9 +149,9 @@ const EditPage = () => {
               }
             />
             <ContentLayout>
-              <Stack spacing={6}>
+              <Flex direction="column" alignItems="stretch" gap={6}>
                 <RoleForm
-                  isLoading={isRoleLoading}
+                  isLoading={isRoleLoading || isLoadingPermissions}
                   disabled={isFormDisabled}
                   errors={errors}
                   values={values}
@@ -150,11 +159,11 @@ const EditPage = () => {
                   onBlur={handleBlur}
                   role={role}
                 />
-                {!isLayoutLoading && !isRoleLoading ? (
+                {!isLoadingPermissionsLayout && !isRoleLoading && !isLoadingPermissions ? (
                   <Box shadow="filterShadow" hasRadius>
                     <Permissions
                       isFormDisabled={isFormDisabled}
-                      permissions={rolePermissions}
+                      permissions={permissions}
                       ref={permissionsRef}
                       layout={permissionsLayout}
                     />
@@ -164,7 +173,7 @@ const EditPage = () => {
                     <LoadingIndicatorPage />
                   </Box>
                 )}
-              </Stack>
+              </Flex>
             </ContentLayout>
           </form>
         )}

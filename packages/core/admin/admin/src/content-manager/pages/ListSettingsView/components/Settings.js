@@ -1,92 +1,128 @@
 import React from 'react';
+
+import {
+  Box,
+  Flex,
+  Grid,
+  GridItem,
+  Option,
+  Select,
+  ToggleInput,
+  Typography,
+} from '@strapi/design-system';
+import { useCollator } from '@strapi/helper-plugin';
 import PropTypes from 'prop-types';
-import styled from 'styled-components';
 import { useIntl } from 'react-intl';
-import { Flex } from '@strapi/design-system/Flex';
-import { Grid, GridItem } from '@strapi/design-system/Grid';
-import { Select, Option } from '@strapi/design-system/Select';
-import { ToggleInput } from '@strapi/design-system/ToggleInput';
-import { Box } from '@strapi/design-system/Box';
-import { Typography } from '@strapi/design-system/Typography';
+
+import { useEnterprise } from '../../../../hooks/useEnterprise';
 import { getTrad } from '../../../utils';
 
-const FlexGap = styled(Flex)`
-  gap: ${({ theme }) => theme.spaces[4]};
-`;
+export const Settings = ({
+  contentTypeOptions,
+  modifiedData,
+  onChange,
+  sortOptions: sortOptionsCE,
+}) => {
+  const { formatMessage, locale } = useIntl();
+  const formatter = useCollator(locale, {
+    sensitivity: 'base',
+  });
+  const sortOptions = useEnterprise(
+    sortOptionsCE,
+    async () =>
+      (await import('../../../../../../ee/admin/content-manager/pages/ListSettingsView/constants'))
+        .REVIEW_WORKFLOW_STAGE_SORT_OPTION_NAME,
+    {
+      combine(ceOptions, eeOption) {
+        return [...ceOptions, { ...eeOption, label: formatMessage(eeOption.label) }];
+      },
 
-const Settings = ({ modifiedData, onChange, sortOptions }) => {
-  const { formatMessage } = useIntl();
+      defaultValue: sortOptionsCE,
+
+      enabled: !!contentTypeOptions?.reviewWorkflows,
+    }
+  );
+
+  const sortOptionsSorted = sortOptions.sort((a, b) => formatter.compare(a.label, b.label));
   const { settings } = modifiedData;
 
   return (
-    <>
-      <Box paddingBottom={4}>
-        <Typography variant="delta" as="h2">
-          {formatMessage({
-            id: getTrad('containers.SettingPage.settings'),
-            defaultMessage: 'Settings',
-          })}
-        </Typography>
-      </Box>
-      <FlexGap justifyContent="space-between" wrap="wrap" paddingBottom={6}>
-        <ToggleInput
-          label={formatMessage({
-            id: getTrad('form.Input.search'),
-            defaultMessage: 'Enable search',
-          })}
-          onChange={(e) => {
-            onChange({ target: { name: 'settings.searchable', value: e.target.checked } });
-          }}
-          onLabel={formatMessage({
-            id: 'app.components.ToggleCheckbox.on-label',
-            defaultMessage: 'on',
-          })}
-          offLabel={formatMessage({
-            id: 'app.components.ToggleCheckbox.off-label',
-            defaultMessage: 'off',
-          })}
-          name="settings.searchable"
-          checked={settings.searchable}
-        />
-        <ToggleInput
-          label={formatMessage({
-            id: getTrad('form.Input.filters'),
-            defaultMessage: 'Enable filters',
-          })}
-          onChange={(e) => {
-            onChange({ target: { name: 'settings.filterable', value: e.target.checked } });
-          }}
-          onLabel={formatMessage({
-            id: 'app.components.ToggleCheckbox.on-label',
-            defaultMessage: 'on',
-          })}
-          offLabel={formatMessage({
-            id: 'app.components.ToggleCheckbox.off-label',
-            defaultMessage: 'off',
-          })}
-          name="settings.filterable"
-          checked={settings.filterable}
-        />
-        <ToggleInput
-          label={formatMessage({
-            id: getTrad('form.Input.bulkActions'),
-            defaultMessage: 'Enable bulk actions',
-          })}
-          onChange={(e) => {
-            onChange({ target: { name: 'settings.bulkable', value: e.target.checked } });
-          }}
-          onLabel={formatMessage({
-            id: 'app.components.ToggleCheckbox.on-label',
-            defaultMessage: 'on',
-          })}
-          offLabel={formatMessage({
-            id: 'app.components.ToggleCheckbox.off-label',
-            defaultMessage: 'off',
-          })}
-          name="settings.bulkable"
-          checked={settings.bulkable}
-        />
-      </FlexGap>
+    <Flex direction="column" alignItems="stretch" gap={4}>
+      <Typography variant="delta" as="h2">
+        {formatMessage({
+          id: getTrad('containers.SettingPage.settings'),
+          defaultMessage: 'Settings',
+        })}
+      </Typography>
+
+      <Flex justifyContent="space-between" gap={4}>
+        <Box width="100%">
+          <ToggleInput
+            label={formatMessage({
+              id: getTrad('form.Input.search'),
+              defaultMessage: 'Enable search',
+            })}
+            onChange={(e) => {
+              onChange({ target: { name: 'settings.searchable', value: e.target.checked } });
+            }}
+            onLabel={formatMessage({
+              id: 'app.components.ToggleCheckbox.on-label',
+              defaultMessage: 'on',
+            })}
+            offLabel={formatMessage({
+              id: 'app.components.ToggleCheckbox.off-label',
+              defaultMessage: 'off',
+            })}
+            name="settings.searchable"
+            checked={settings.searchable}
+          />
+        </Box>
+
+        <Box width="100%">
+          <ToggleInput
+            label={formatMessage({
+              id: getTrad('form.Input.filters'),
+              defaultMessage: 'Enable filters',
+            })}
+            onChange={(e) => {
+              onChange({ target: { name: 'settings.filterable', value: e.target.checked } });
+            }}
+            onLabel={formatMessage({
+              id: 'app.components.ToggleCheckbox.on-label',
+              defaultMessage: 'on',
+            })}
+            offLabel={formatMessage({
+              id: 'app.components.ToggleCheckbox.off-label',
+              defaultMessage: 'off',
+            })}
+            name="settings.filterable"
+            checked={settings.filterable}
+          />
+        </Box>
+
+        <Box width="100%">
+          <ToggleInput
+            label={formatMessage({
+              id: getTrad('form.Input.bulkActions'),
+              defaultMessage: 'Enable bulk actions',
+            })}
+            onChange={(e) => {
+              onChange({ target: { name: 'settings.bulkable', value: e.target.checked } });
+            }}
+            onLabel={formatMessage({
+              id: 'app.components.ToggleCheckbox.on-label',
+              defaultMessage: 'on',
+            })}
+            offLabel={formatMessage({
+              id: 'app.components.ToggleCheckbox.off-label',
+              defaultMessage: 'off',
+            })}
+            name="settings.bulkable"
+            checked={settings.bulkable}
+          />
+        </Box>
+      </Flex>
+
       <Grid gap={4}>
         <GridItem s={12} col={6}>
           <Select
@@ -120,9 +156,9 @@ const Settings = ({ modifiedData, onChange, sortOptions }) => {
             name="settings.defaultSortBy"
             value={modifiedData.settings.defaultSortBy || ''}
           >
-            {sortOptions.map((sortBy) => (
-              <Option key={sortBy} value={sortBy}>
-                {sortBy}
+            {sortOptionsSorted.map(({ value, label }) => (
+              <Option key={value} value={value}>
+                {label}
               </Option>
             ))}
           </Select>
@@ -145,7 +181,7 @@ const Settings = ({ modifiedData, onChange, sortOptions }) => {
           </Select>
         </GridItem>
       </Grid>
-    </>
+    </Flex>
   );
 };
 
@@ -155,9 +191,13 @@ Settings.defaultProps = {
 };
 
 Settings.propTypes = {
+  contentTypeOptions: PropTypes.object.isRequired,
   modifiedData: PropTypes.object,
   onChange: PropTypes.func.isRequired,
-  sortOptions: PropTypes.array,
+  sortOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      value: PropTypes.string,
+      label: PropTypes.string,
+    }).isRequired
+  ),
 };
-
-export default Settings;

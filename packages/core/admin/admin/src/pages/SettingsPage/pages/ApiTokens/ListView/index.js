@@ -1,51 +1,55 @@
-import React, { useEffect, useRef } from 'react';
-import { useIntl } from 'react-intl';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useHistory } from 'react-router-dom';
-import qs from 'qs';
+import * as React from 'react';
 
+import { ContentLayout, HeaderLayout, Main } from '@strapi/design-system';
 import {
-  SettingsPageTitle,
-  useFocusWhenNavigate,
-  useNotification,
-  NoPermissions,
-  useRBAC,
-  NoContent,
-  DynamicTable,
-  useTracking,
-  useGuidedTour,
   LinkButton,
+  NoContent,
+  NoPermissions,
+  SettingsPageTitle,
+  useAPIErrorHandler,
+  useFetchClient,
+  useFocusWhenNavigate,
+  useGuidedTour,
+  useNotification,
+  useRBAC,
+  useTracking,
 } from '@strapi/helper-plugin';
-import { HeaderLayout, ContentLayout } from '@strapi/design-system/Layout';
-import { Main } from '@strapi/design-system/Main';
-import { Button } from '@strapi/design-system/Button';
-import Plus from '@strapi/icons/Plus';
+import { Plus } from '@strapi/icons';
+import qs from 'qs';
+import { useIntl } from 'react-intl';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 
-import { axiosInstance } from '../../../../../core/utils';
-import adminPermissions from '../../../../../permissions';
+import { selectAdminPermissions } from '../../../../App/selectors';
+import { API_TOKEN_TYPE } from '../../../components/Tokens/constants';
+import Table from '../../../components/Tokens/Table';
+
 import tableHeaders from './utils/tableHeaders';
-import TableRows from './DynamicTable';
 
 const ApiTokenListView = () => {
   useFocusWhenNavigate();
   const queryClient = useQueryClient();
   const { formatMessage } = useIntl();
   const toggleNotification = useNotification();
+  const permissions = useSelector(selectAdminPermissions);
   const {
     allowedActions: { canCreate, canDelete, canUpdate, canRead },
-  } = useRBAC(adminPermissions.settings['api-tokens']);
+  } = useRBAC(permissions.settings['api-tokens']);
   const { push } = useHistory();
   const { trackUsage } = useTracking();
   const { startSection } = useGuidedTour();
-  const startSectionRef = useRef(startSection);
+  const startSectionRef = React.useRef(startSection);
+  const { get, del } = useFetchClient();
+  const { formatAPIError } = useAPIErrorHandler();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (startSectionRef.current) {
       startSectionRef.current('apiTokens');
     }
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     push({ search: qs.stringify({ sort: 'name:ASC' }, { encode: false }) });
   }, [push]);
 
@@ -57,65 +61,58 @@ const ApiTokenListView = () => {
     },
   }));
 
-  const {
-    data: apiTokens,
-    status,
-    isFetching,
-  } = useQuery(
+  const { data: apiTokens, isLoading: isLoadingTokens } = useQuery(
     ['api-tokens'],
     async () => {
-      trackUsage('willAccessTokenList');
+      trackUsage('willAccessTokenList', {
+        tokenType: API_TOKEN_TYPE,
+      });
+
       const {
         data: { data },
-      } = await axiosInstance.get(`/admin/api-tokens`);
+      } = await get(`/admin/api-tokens`);
 
-      trackUsage('didAccessTokenList', { number: data.length });
+      trackUsage('didAccessTokenList', { number: data.length, tokenType: API_TOKEN_TYPE });
 
       return data;
     },
     {
+      cacheTime: 0,
       enabled: canRead,
-      onError() {
+      onError(error) {
         toggleNotification({
           type: 'warning',
-          message: { id: 'notification.error', defaultMessage: 'An error occured' },
+          message: formatAPIError(error),
         });
       },
     }
   );
 
-  const isLoading =
-    canRead &&
-    ((status !== 'success' && status !== 'error') || (status === 'success' && isFetching));
+  const isLoading = isLoadingTokens;
 
   const deleteMutation = useMutation(
     async (id) => {
-      await axiosInstance.delete(`/admin/api-tokens/${id}`);
+      await del(`/admin/api-tokens/${id}`);
     },
     {
       async onSuccess() {
         await queryClient.invalidateQueries(['api-tokens']);
         trackUsage('didDeleteToken');
       },
-      onError(err) {
-        if (err?.response?.data?.data) {
-          toggleNotification({ type: 'warning', message: err.response.data.data });
-        } else {
-          toggleNotification({
-            type: 'warning',
-            message: { id: 'notification.error', defaultMessage: 'An error occured' },
-          });
-        }
+      onError(error) {
+        toggleNotification({ type: 'warning', message: formatAPIError(error) });
       },
     }
   );
 
-  const shouldDisplayDynamicTable = canRead && apiTokens;
-  const shouldDisplayNoContent = canRead && !apiTokens && !canCreate;
-  const shouldDisplayNoContentWithCreationButton = canRead && !apiTokens && canCreate;
+  const hasApiTokens = apiTokens && apiTokens.length > 0;
+  const shouldDisplayDynamicTable = canRead && hasApiTokens;
+  const shouldDisplayNoContent = canRead && !hasApiTokens && !canCreate;
+  const shouldDisplayNoContentWithCreationButton = canRead && !hasApiTokens && canCreate;
 
   return (
     <Main aria-busy={isLoading}>
+      {/* TODO: this needs to be translated */}
       <SettingsPageTitle name="API Tokens" />
       <HeaderLayout
         title={formatMessage({ id: 'Settings.apiTokens.title', defaultMessage: 'API Tokens' })}
@@ -124,12 +121,16 @@ const ApiTokenListView = () => {
           defaultMessage: 'List of generated tokens to consume the API',
         })}
         primaryAction={
-          canCreate ? (
+          canCreate && (
             <LinkButton
               data-testid="create-api-token-button"
               startIcon={<Plus />}
               size="S"
-              onClick={() => trackUsage('willAddTokenFromList')}
+              onClick={() =>
+                trackUsage('willAddTokenFromList', {
+                  tokenType: API_TOKEN_TYPE,
+                })
+              }
               to="/settings/api-tokens/create"
             >
               {formatMessage({
@@ -137,27 +138,22 @@ const ApiTokenListView = () => {
                 defaultMessage: 'Create new API Token',
               })}
             </LinkButton>
-          ) : undefined
+          )
         }
       />
       <ContentLayout>
         {!canRead && <NoPermissions />}
         {shouldDisplayDynamicTable && (
-          <DynamicTable
+          <Table
+            permissions={{ canRead, canDelete, canUpdate }}
             headers={headers}
             contentType="api-tokens"
             rows={apiTokens}
-            withBulkActions={canDelete || canUpdate}
             isLoading={isLoading}
             onConfirmDelete={(id) => deleteMutation.mutateAsync(id)}
-          >
-            <TableRows
-              canDelete={canDelete}
-              canUpdate={canUpdate}
-              rows={apiTokens}
-              withBulkActions={canDelete || canUpdate}
-            />
-          </DynamicTable>
+            tokens={apiTokens}
+            tokenType={API_TOKEN_TYPE}
+          />
         )}
         {shouldDisplayNoContentWithCreationButton && (
           <NoContent
@@ -166,12 +162,12 @@ const ApiTokenListView = () => {
               defaultMessage: 'Add your first API Token',
             }}
             action={
-              <Button variant="secondary" startIcon={<Plus />}>
+              <LinkButton variant="secondary" startIcon={<Plus />} to="/settings/api-tokens/create">
                 {formatMessage({
                   id: 'Settings.apiTokens.addNewToken',
                   defaultMessage: 'Add new API Token',
                 })}
-              </Button>
+              </LinkButton>
             }
           />
         )}

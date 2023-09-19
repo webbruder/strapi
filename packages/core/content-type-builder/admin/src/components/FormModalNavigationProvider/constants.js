@@ -7,9 +7,11 @@ const INITIAL_STATE_DATA = {
   forTarget: null,
   modalType: null,
   isOpen: false,
+  showBackLink: false,
   kind: null,
   step: null,
   targetUid: null,
+  customFieldUid: null,
 };
 
 export { INITIAL_STATE_DATA };

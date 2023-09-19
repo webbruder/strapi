@@ -1,4 +1,8 @@
-import { get, isEqual, omit, sortBy, camelCase } from 'lodash';
+import camelCase from 'lodash/camelCase';
+import get from 'lodash/get';
+import isEqual from 'lodash/isEqual';
+import omit from 'lodash/omit';
+import sortBy from 'lodash/sortBy';
 
 import pluginId from '../../../pluginId';
 import makeUnique from '../../../utils/makeUnique';
@@ -94,6 +98,11 @@ const formatAttributes = (attributes, mainDataUID) => {
       acc[name] = removeNullKeys(formattedRelationAttribute);
     }
 
+    if (currentAttribute.customField) {
+      const customFieldAttribute = { ...currentAttribute, type: 'customField' };
+      acc[name] = removeNullKeys(customFieldAttribute);
+    }
+
     return acc;
   }, {});
 };
@@ -146,8 +155,8 @@ const sortContentType = (types) =>
 
 export {
   formatComponent,
+  formatMainDataType,
   getComponentsToPost,
   getCreatedAndModifiedComponents,
-  formatMainDataType,
   sortContentType,
 };

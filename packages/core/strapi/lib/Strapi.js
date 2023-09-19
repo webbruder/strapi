@@ -23,8 +23,11 @@ const entityValidator = require('./services/entity-validator');
 const createTelemetry = require('./services/metrics');
 const requestContext = require('./services/request-context');
 const createAuth = require('./services/auth');
+const createCustomFields = require('./services/custom-fields');
+const createContentAPI = require('./services/content-api');
 const createUpdateNotifier = require('./utils/update-notifier');
 const createStartupLogger = require('./utils/startup-logger');
+const createStrapiFetch = require('./utils/fetch');
 const { LIFECYCLES } = require('./utils/lifecycles');
 const ee = require('./utils/ee');
 const contentTypesRegistry = require('./core/registries/content-types');
@@ -35,12 +38,16 @@ const hooksRegistry = require('./core/registries/hooks');
 const controllersRegistry = require('./core/registries/controllers');
 const modulesRegistry = require('./core/registries/modules');
 const pluginsRegistry = require('./core/registries/plugins');
+const customFieldsRegistry = require('./core/registries/custom-fields');
 const createConfigProvider = require('./core/registries/config');
 const apisRegistry = require('./core/registries/apis');
 const bootstrap = require('./core/bootstrap');
 const loaders = require('./core/loaders');
 const { destroyOnSignal } = require('./utils/signals');
+const getNumberOfDynamicZones = require('./services/utils/dynamic-zones');
 const sanitizersRegistry = require('./core/registries/sanitizers');
+const validatorsRegistry = require('./core/registries/validators');
+const convertCustomFieldType = require('./utils/convert-custom-field-type');
 
 // TODO: move somewhere else
 const draftAndPublishSync = require('./migrations/draft-publish');
@@ -75,7 +82,7 @@ class Strapi {
     // Load the app configuration from the dist directory
     const appConfig = loadConfiguration({ appDir: rootDirs.app, distDir: rootDirs.dist }, opts);
 
-    // Instanciate the Strapi container
+    // Instantiate the Strapi container
     this.container = createContainer(this);
 
     // Register every Strapi registry in the container
@@ -88,9 +95,12 @@ class Strapi {
     this.container.register('controllers', controllersRegistry(this));
     this.container.register('modules', modulesRegistry(this));
     this.container.register('plugins', pluginsRegistry(this));
+    this.container.register('custom-fields', customFieldsRegistry(this));
     this.container.register('apis', apisRegistry(this));
     this.container.register('auth', createAuth(this));
+    this.container.register('content-api', createContentAPI(this));
     this.container.register('sanitizers', sanitizersRegistry(this));
+    this.container.register('validators', validatorsRegistry(this));
 
     // Create a mapping of every useful directory (for the app, dist and static directories)
     this.dirs = utils.getDirs(rootDirs, { strapi: this });
@@ -99,10 +109,10 @@ class Strapi {
     this.isLoaded = false;
     this.reload = this.reload();
 
-    // Instanciate the Koa app & the HTTP server
+    // Instantiate the Koa app & the HTTP server
     this.server = createServer(this);
 
-    // Strapi utils instanciation
+    // Strapi utils instantiation
     this.fs = createStrapiFs(this);
     this.eventHub = createEventHub();
     this.startupLogger = createStartupLogger(this);
@@ -110,16 +120,22 @@ class Strapi {
     this.cron = createCronService();
     this.telemetry = createTelemetry(this);
     this.requestContext = requestContext;
+    this.customFields = createCustomFields(this);
+    this.fetch = createStrapiFetch(this);
 
     createUpdateNotifier(this).notify();
+
+    Object.defineProperty(this, 'EE', {
+      get: () => {
+        ee.init(this.dirs.app.root, this.log);
+        return ee.isEE;
+      },
+      configurable: false,
+    });
   }
 
   get config() {
     return this.container.get('config');
-  }
-
-  get EE() {
-    return ee({ dir: this.dirs.dist.root, logger: this.log });
   }
 
   get services() {
@@ -190,8 +206,16 @@ class Strapi {
     return this.container.get('auth');
   }
 
+  get contentAPI() {
+    return this.container.get('content-api');
+  }
+
   get sanitizers() {
     return this.container.get('sanitizers');
+  }
+
+  get validators() {
+    return this.container.get('validators');
   }
 
   async start() {
@@ -210,10 +234,9 @@ class Strapi {
 
   async destroy() {
     await this.server.destroy();
-
     await this.runLifecyclesFunctions(LIFECYCLES.DESTROY);
 
-    this.eventHub.removeAllListeners();
+    this.eventHub.destroy();
 
     if (_.has(this, 'db')) {
       await this.db.destroy();
@@ -230,11 +253,21 @@ class Strapi {
   sendStartupTelemetry() {
     // Emit started event.
     // do not await to avoid slower startup
+    // This event is anonymous
+
     this.telemetry.send('didStartServer', {
-      database: strapi.config.get('database.connection.client'),
-      plugins: Object.keys(strapi.plugins),
-      // TODO: to add back
-      // providers: this.config.installedProviders,
+      groupProperties: {
+        database: strapi.config.get('database.connection.client'),
+        plugins: Object.keys(strapi.plugins),
+        numberOfAllContentTypes: _.size(this.contentTypes), // TODO: V5: This event should be renamed numberOfContentTypes in V5 as the name is already taken to describe the number of content types using i18n.
+        numberOfComponents: _.size(this.components),
+        numberOfDynamicZones: getNumberOfDynamicZones(),
+        environment: strapi.config.environment,
+        customizedControllers: Object.entries(strapi.controllers).filter(item => item[0].startsWith("api::") && item[1].isCustom() ).length,
+        customFields: strapi.container.get('custom-fields').getAll()
+        // TODO: to add back
+        // providers: this.config.installedProviders,
+      },
     });
   }
 
@@ -287,6 +320,7 @@ class Strapi {
         this.server.listen(listenSocket, onListen);
       } else {
         const { host, port } = this.config.get('server');
+
         this.server.listen(port, host, onListen);
       }
     });
@@ -345,6 +379,10 @@ class Strapi {
     await loaders.loadSanitizers(this);
   }
 
+  async loadValidators() {
+    await loaders.loadValidators(this);
+  }
+
   registerInternalHooks() {
     this.container.get('hooks').set('strapi::content-types.beforeSync', createAsyncParallelHook());
     this.container.get('hooks').set('strapi::content-types.afterSync', createAsyncParallelHook());
@@ -357,6 +395,7 @@ class Strapi {
     await Promise.all([
       this.loadApp(),
       this.loadSanitizers(),
+      this.loadValidators(),
       this.loadPlugins(),
       this.loadAdmin(),
       this.loadAPIs(),
@@ -372,6 +411,7 @@ class Strapi {
       eventHub: this.eventHub,
       logger: this.log,
       configuration: this.config.get('server.webhooks', {}),
+      fetch: this.fetch,
     });
 
     this.registerInternalHooks();
@@ -379,6 +419,8 @@ class Strapi {
     this.telemetry.register();
 
     await this.runLifecyclesFunctions(LIFECYCLES.REGISTER);
+    // NOTE: Swap type customField for underlying data type
+    convertCustomFieldType(this);
 
     return this;
   }
@@ -430,6 +472,10 @@ class Strapi {
 
     await this.db.schema.sync();
 
+    if (this.EE) {
+      await ee.checkLicense({ strapi: this });
+    }
+
     await this.hook('strapi::content-types.afterSync').call({
       oldContentTypes,
       contentTypes: strapi.contentTypes,
@@ -445,7 +491,9 @@ class Strapi {
     await this.startWebhooks();
 
     await this.server.initMiddlewares();
-    await this.server.initRouting();
+    this.server.initRouting();
+
+    await this.contentAPI.permissions.registerActions();
 
     await this.runLifecyclesFunctions(LIFECYCLES.BOOTSTRAP);
 
@@ -511,16 +559,16 @@ class Strapi {
     // plugins
     await this.container.get('modules')[lifecycleName]();
 
-    // user
-    const userLifecycleFunction = this.app && this.app[lifecycleName];
-    if (isFunction(userLifecycleFunction)) {
-      await userLifecycleFunction({ strapi: this });
-    }
-
     // admin
     const adminLifecycleFunction = this.admin && this.admin[lifecycleName];
     if (isFunction(adminLifecycleFunction)) {
       await adminLifecycleFunction({ strapi: this });
+    }
+
+    // user
+    const userLifecycleFunction = this.app && this.app[lifecycleName];
+    if (isFunction(userLifecycleFunction)) {
+      await userLifecycleFunction({ strapi: this });
     }
   }
 

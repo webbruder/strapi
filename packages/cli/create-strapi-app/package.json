@@ -1,7 +1,12 @@
 {
   "name": "create-strapi-app",
-  "version": "4.3.9",
+  "version": "4.13.6",
   "description": "Generate a new Strapi application.",
+  "dependencies": {
+    "@strapi/generate-new": "4.13.6",
+    "commander": "8.3.0",
+    "inquirer": "8.2.5"
+  },
   "keywords": [
     "create-strapi-app",
     "create",
@@ -30,20 +35,25 @@
       "url": "https://strapi.io"
     }
   ],
-  "main": "./index.js",
-  "bin": {
-    "create-strapi-app": "./index.js"
-  },
+  "bin": "./bin/index.js",
+  "files": [
+    "./dist",
+    "./bin"
+  ],
   "scripts": {
-    "test": "echo \"no tests yet\""
+    "build": "run -T tsc",
+    "build:ts": "run -T tsc",
+    "watch": "run -T tsc -w --preserveWatchOutput",
+    "clean": "run -T rimraf ./dist",
+    "prepublishOnly": "yarn clean && yarn build",
+    "lint": "run -T eslint ."
   },
-  "dependencies": {
-    "@strapi/generate-new": "4.3.9",
-    "commander": "6.1.0",
-    "inquirer": "8.2.4"
+  "devDependencies": {
+    "eslint-config-custom": "4.13.6",
+    "tsconfig": "4.13.6"
   },
   "engines": {
-    "node": ">=14.19.1 <=18.x.x",
+    "node": ">=16.0.0 <=20.x.x",
     "npm": ">=6.0.0"
   }
 }
