@@ -3,6 +3,7 @@
 const _ = require('lodash');
 
 const { yup } = require('@strapi/utils');
+const { castArray } = require('lodash/fp');
 
 /**
  * @type {import('yup').StringSchema} StringSchema
@@ -122,11 +123,14 @@ const addStringRegexValidator = (validator, { attr }) =>
  *
  * @returns {AnySchema}
  */
-const addUniqueValidator = (validator, { attr, model, updatedAttribute, entity }) => {
+const addUniqueValidator = (validator, metas) => {
+  const { attr, model, updatedAttribute, entity, validateUniqueFieldWithinEntity } = metas;
+
   if (!attr.unique && attr.type !== 'uid') {
     return validator;
   }
 
+  const entities = entity ? castArray(entity) : [];
   return validator.test('unique', 'This attribute must be unique', async (value) => {
     /**
      * If the attribute value is `null` we want to skip the unique validation.
@@ -134,6 +138,10 @@ const addUniqueValidator = (validator, { attr, model, updatedAttribute, entity }
      */
     if (_.isNil(updatedAttribute.value)) {
       return true;
+    }
+
+    if (validateUniqueFieldWithinEntity && !validateUniqueFieldWithinEntity(updatedAttribute)) {
+      return false;
     }
 
     /**
@@ -146,8 +154,11 @@ const addUniqueValidator = (validator, { attr, model, updatedAttribute, entity }
       return true;
     }
 
+    // Check against existing entries in the database
     const whereParams = entity
-      ? { $and: [{ [updatedAttribute.name]: value }, { $not: { id: entity.id } }] }
+      ? {
+          $and: [{ [updatedAttribute.name]: value }, { id: { $notIn: entities.map((e) => e.id) } }],
+        }
       : { [updatedAttribute.name]: value };
 
     const record = await strapi.db.query(model.uid).findOne({
@@ -170,6 +181,7 @@ const stringValidator = composeValidators(
 );
 
 const emailValidator = composeValidators(stringValidator, (validator) =>
+  // eslint-disable-next-line no-template-curly-in-string
   validator.email().min(1, '${path} cannot be empty')
 );
 

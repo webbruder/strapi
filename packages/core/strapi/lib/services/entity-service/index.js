@@ -20,6 +20,7 @@ const {
 } = require('./components');
 const { pickSelectionParams } = require('./params');
 const { applyTransforms } = require('./attributes');
+const { getDeepPopulate } = require('../../../../content-manager/server/services/utils/populate');
 
 const transformLoadParamsToQuery = (uid, field, params = {}, pagination = {}) => {
   return {
@@ -153,6 +154,7 @@ const createDefaultImplementation = ({ strapi, db, eventHub, entityValidator }) 
     const model = strapi.getModel(uid);
 
     const isDraft = contentTypesUtils.isDraft(data, model);
+
     const validData = await entityValidator.validateEntityCreation(model, data, { isDraft });
 
     // select / populate
@@ -193,7 +195,9 @@ const createDefaultImplementation = ({ strapi, db, eventHub, entityValidator }) 
 
     const model = strapi.getModel(uid);
 
-    const entityToUpdate = await db.query(uid).findOne({ where: { id: entityId } });
+    const entityToUpdate = await db
+      .query(uid)
+      .findOne({ where: { id: entityId }, populate: getDeepPopulate(uid) });
 
     if (!entityToUpdate) {
       return null;

@@ -68,9 +68,33 @@ const addDefault = (createOrUpdate) => {
 
 const preventCast = (validator) => validator.transform((val, originalVal) => originalVal);
 
+/**
+ * Validate that all the unique fields within the entity are unique
+ *
+ * @param {String} uid
+ * @param {Object} uniqueFieldValues
+ * @param {Object} attribute
+ * @returns
+ */
+const validateUniqueFieldWithinEntity = (uid, uniqueFieldValues, attribute) => {
+  const fieldValues = uniqueFieldValues[uid][attribute.name];
+
+  if (new Set(fieldValues).size === fieldValues.length) {
+    // If every instance of this field within the entity is unique then validation passes
+    return true;
+  }
+  if (fieldValues.filter((v) => v === attribute.value).length < 2) {
+    // If this field is not one that is duplicated within the entity then validation passes
+    return true;
+  }
+
+  return false;
+};
+
 const createComponentValidator =
   (createOrUpdate) =>
-  ({ attr, updatedAttribute }, { isDraft }) => {
+  (metas, { isDraft }) => {
+    const { attr, updatedAttribute, entity, uniqueFieldValues } = metas;
     let validator;
 
     const model = strapi.getModel(attr.component);
@@ -79,17 +103,35 @@ const createComponentValidator =
     }
 
     if (prop('repeatable', attr) === true) {
-      validator = yup
-        .array()
-        .of(
-          yup.lazy((item) =>
-            createModelValidator(createOrUpdate)({ model, data: item }, { isDraft }).notNull()
-          )
-        );
+      validator = yup.array().of(
+        yup.lazy((item) => {
+          const schema = createModelValidator(createOrUpdate)(
+            {
+              model,
+              data: item,
+              entity: entity?.[updatedAttribute.name] ?? null,
+              validateUniqueFieldWithinEntity: (attribute) =>
+                validateUniqueFieldWithinEntity(model.uid, uniqueFieldValues, attribute),
+            },
+            { isDraft }
+          ).notNull();
+
+          return schema;
+        })
+      );
       validator = addRequiredValidation(createOrUpdate)(validator, { attr: { required: true } });
       validator = addMinMax(validator, { attr, updatedAttribute });
     } else {
-      validator = createModelValidator(createOrUpdate)({ model, updatedAttribute }, { isDraft });
+      validator = createModelValidator(createOrUpdate)(
+        {
+          model,
+          data: updatedAttribute.value,
+          entity: entity?.[updatedAttribute.name] ?? null,
+          validateUniqueFieldWithinEntity: (attribute) =>
+            validateUniqueFieldWithinEntity(model.uid, uniqueFieldValues, attribute),
+        },
+        { isDraft }
+      );
       validator = addRequiredValidation(createOrUpdate)(validator, {
         attr: { required: !isDraft && attr.required },
       });
@@ -100,7 +142,7 @@ const createComponentValidator =
 
 const createDzValidator =
   (createOrUpdate) =>
-  ({ attr, updatedAttribute }, { isDraft }) => {
+  ({ attr, updatedAttribute, uniqueFieldValues, entity }, { isDraft }) => {
     let validator;
 
     validator = yup.array().of(
@@ -114,7 +156,18 @@ const createDzValidator =
           .notNull();
 
         return model
-          ? schema.concat(createModelValidator(createOrUpdate)({ model, data: item }, { isDraft }))
+          ? schema.concat(
+              createModelValidator(createOrUpdate)(
+                {
+                  model,
+                  data: item,
+                  entity: entity?.[updatedAttribute.name] ?? null,
+                  validateUniqueFieldWithinEntity: (attribute) =>
+                    validateUniqueFieldWithinEntity(model.uid, uniqueFieldValues, attribute),
+                },
+                { isDraft }
+              )
+            )
           : schema;
       })
     );
@@ -185,7 +238,7 @@ const createAttributeValidator = (createOrUpdate) => (metas, options) => {
 
 const createModelValidator =
   (createOrUpdate) =>
-  ({ model, data, entity }, options) => {
+  ({ model, data, entity, validateUniqueFieldWithinEntity, uniqueFieldValues }, options) => {
     const writableAttributes = model ? getWritableAttributes(model) : [];
 
     const schema = writableAttributes.reduce((validators, attributeName) => {
@@ -195,6 +248,8 @@ const createModelValidator =
           updatedAttribute: { name: attributeName, value: prop(attributeName, data) },
           model,
           entity,
+          uniqueFieldValues,
+          validateUniqueFieldWithinEntity,
         },
         options
       );
@@ -216,14 +271,78 @@ const createValidateEntity =
       );
     }
 
+    // Collect all the unique fields values within the entity and
+    // save them per content type
+    const uniqueFieldValues = Object.entries(data).reduce(
+      (acc, [attributeName, attributeValue]) => {
+        if (!attributeValue) {
+          return acc;
+        }
+
+        const attribute = model.attributes[attributeName];
+
+        if (!['component', 'dynamiczone'].includes(attribute?.type ?? '')) {
+          return acc;
+        }
+
+        const components = castArray(attributeValue);
+
+        const models = [];
+        if (attribute.component) {
+          models.push(strapi.getModel(attribute.component));
+        } else {
+          // When it is a dynamic zone there can be multiple components
+          const uniqueKeys = new Set();
+          components.forEach((component) => {
+            if (!uniqueKeys.has(component.__component)) {
+              uniqueKeys.add(component.__component);
+              models.push(strapi.getModel(component.__component));
+            }
+          });
+        }
+
+        models.forEach((componentModel) => {
+          Object.entries(componentModel.attributes).forEach(([key, value]) => {
+            if (!value.unique) {
+              // This attribute is not unique, skip it
+              return;
+            }
+
+            // Check if the uid is already present in the accumulator
+            if (!acc[componentModel.uid]) {
+              acc[componentModel.uid] = {};
+            }
+
+            // Iterate over each component item and add it to the array
+            components.forEach((item) => {
+              if (!item[key]) {
+                return;
+              }
+
+              if (acc[componentModel.uid][key]) {
+                acc[componentModel.uid][key].push(item[key]);
+              } else {
+                acc[componentModel.uid][key] = [item[key]];
+              }
+            });
+          });
+        });
+
+        return acc;
+      },
+      {}
+    );
+
     const validator = createModelValidator(createOrUpdate)(
       {
         model,
         data,
         entity,
+        uniqueFieldValues,
       },
       { isDraft }
     )
+      // eslint-disable-next-line func-names
       .test('relations-test', 'check that all relations exist', async function (data) {
         try {
           await checkRelationsExist(buildRelationsStore({ uid: model.uid, data }));
