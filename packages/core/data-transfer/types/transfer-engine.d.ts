@@ -1,8 +1,8 @@
 import type { PassThrough } from 'stream';
 import type { ITransferResults, TransferTransforms, TransferProgress } from './utils';
 import type { ISourceProvider, IDestinationProvider } from './providers';
-import type { IDiagnosticReporter } from '../src/engine/diagnostic';
-import type { Diff } from '../src/utils/json';
+import type { IDiagnosticReporter } from '../engine/diagnostic';
+import type { Diff } from '../utils/json';
 
 export type TransferFilterPreset = 'content' | 'files' | 'config';
 
@@ -80,6 +80,16 @@ export interface ITransferEngine<
    * connections, open files, etc...
    */
   bootstrap(): Promise<void>;
+
+  /**
+   * Abort the transfer process
+   */
+  abortTransfer(): Promise<void>;
+
+  /**
+   * Run the integrity check which will make sure it's possible
+   */
+  reportWarning(message: string, origin?: string): void;
 
   /**
    * Engine init step. Must be called after the providers bootstrap.

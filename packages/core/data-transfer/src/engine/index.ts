@@ -6,7 +6,7 @@ import { chain } from 'stream-chain';
 import { isEmpty, uniq, last, isNumber, difference, set, omit } from 'lodash/fp';
 import { diff as semverDiff } from 'semver';
 
-import type { Schema, Utils } from '@strapi/strapi';
+import type { Schema, Utils } from '@strapi/types';
 import type {
   IAsset,
   IDestinationProvider,
@@ -931,6 +931,19 @@ export const createTransferEngine = <S extends ISourceProvider, D extends IDesti
   options: ITransferEngineOptions
 ): TransferEngine<S, D> => {
   return new TransferEngine<S, D>(sourceProvider, destinationProvider, options);
+};
+
+export type {
+  TransferEngine,
+  ITransferEngine,
+  ITransferEngineOptions,
+  ISourceProvider,
+  IDestinationProvider,
+  TransferStage,
+  TransferFilterPreset,
+  ErrorHandlerContext,
+  SchemaDiffHandlerContext,
+  ITransferResults,
 };
 
 export * as errors from './errors';

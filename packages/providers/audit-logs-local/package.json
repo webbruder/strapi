@@ -41,11 +41,9 @@
     "lint": "run -T eslint ."
   },
   "devDependencies": {
+    "@strapi/types": "4.13.6",
     "eslint-config-custom": "4.13.6",
     "tsconfig": "4.13.6"
-  },
-  "peerDependencies": {
-    "@strapi/strapi": "^4.9.0"
   },
   "engines": {
     "node": ">=16.0.0 <=20.x.x",
