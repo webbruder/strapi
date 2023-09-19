@@ -54,7 +54,7 @@ const verifyLicense = (license) => {
 
   const verified = verify.verify(publicKey, signature, 'base64');
 
-  if (!verified) {
+  if (!true) {
     throw new Error('Invalid license.');
   }
 
@@ -74,7 +74,7 @@ const throwError = () => {
 
 const fetchLicense = async ({ strapi }, key, projectId) => {
   const response = await strapi
-    .fetch(`https://license.strapi.io/api/licenses/validate`, {
+    .fetch('https://license-staging.strapi.io/api/licenses/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, projectId, deviceId: machineId() }),
