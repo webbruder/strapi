@@ -3,15 +3,16 @@ import * as React from 'react';
 import * as Toolbar from '@radix-ui/react-toolbar';
 import { Flex, Icon, Tooltip, Select, Option } from '@strapi/design-system';
 import { pxToRem } from '@strapi/helper-plugin';
-import { BulletList, NumberList } from '@strapi/icons';
+import { BulletList, NumberList, Link } from '@strapi/icons';
 import PropTypes from 'prop-types';
 import { useIntl } from 'react-intl';
 import { Editor, Transforms, Element as SlateElement } from 'slate';
-import { useSlate } from 'slate-react';
+import { ReactEditor, useSlate } from 'slate-react';
 import styled from 'styled-components';
 
 import { useBlocksStore } from '../hooks/useBlocksStore';
 import { useModifiersStore } from '../hooks/useModifiersStore';
+import { LinkPopover } from '../LinkPopover';
 
 const Separator = styled(Toolbar.Separator)`
   background: ${({ theme }) => theme.colors.neutral150};
@@ -25,7 +26,7 @@ const FlexButton = styled(Flex).attrs({ as: 'button' })`
   }
 `;
 
-const ToolbarButton = ({ icon, name, label, isActive, handleClick }) => {
+const ToolbarButton = React.forwardRef(({ icon, name, label, isActive, handleClick }, ref) => {
   const { formatMessage } = useIntl();
   const labelMessage = formatMessage(label);
 
@@ -33,6 +34,7 @@ const ToolbarButton = ({ icon, name, label, isActive, handleClick }) => {
     <Tooltip description={labelMessage}>
       <Toolbar.ToggleItem value={name} data-state={isActive ? 'on' : 'off'} asChild>
         <FlexButton
+          ref={ref}
           background={isActive ? 'primary100' : ''}
           alignItems="center"
           justifyContent="center"
@@ -50,7 +52,7 @@ const ToolbarButton = ({ icon, name, label, isActive, handleClick }) => {
       </Toolbar.ToggleItem>
     </Tooltip>
   );
-};
+});
 
 ToolbarButton.propTypes = {
   icon: PropTypes.elementType.isRequired,
@@ -290,6 +292,86 @@ ListButton.propTypes = {
   }).isRequired,
 };
 
+const LinkButton = () => {
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const buttonRef = React.useRef(null);
+  const editor = useSlate();
+
+  const isLinkActive = () => {
+    const { selection } = editor;
+
+    if (!selection) return false;
+
+    const [match] = Array.from(
+      Editor.nodes(editor, {
+        at: Editor.unhangRange(editor, selection),
+        match: (node) =>
+          !Editor.isEditor(node) && SlateElement.isElement(node) && node.type === 'link',
+      })
+    );
+
+    return Boolean(match);
+  };
+
+  const isActive = isLinkActive();
+
+  const addLink = ({ text, url }) => {
+    const link = {
+      type: 'link',
+      url,
+      children: [{ text }],
+    };
+
+    const { selection } = editor;
+    ReactEditor.focus(editor);
+
+    if (selection) {
+      const [parentNode] = Editor.parent(editor, selection.focus?.path);
+
+      if (parentNode.type === 'link') {
+        removeLink(editor);
+      }
+
+      // We wrap the selected range and we move the cursor to the end
+      Transforms.wrapNodes(editor, link, { split: true });
+      Transforms.collapse(editor, { edge: 'end' });
+    } else {
+      Transforms.insertNodes(editor, { type: 'paragraph', children: [link] });
+    }
+
+    setPopoverOpen(false);
+  };
+
+  const removeLink = () => {
+    Transforms.unwrapNodes(editor, {
+      match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+    });
+  };
+
+  return (
+    <>
+      <ToolbarButton
+        ref={buttonRef}
+        icon={Link}
+        name="link"
+        label={{
+          id: 'components.Blocks.link',
+          defaultMessage: 'Link',
+        }}
+        isActive={isActive}
+        handleClick={() => setPopoverOpen(true)}
+      />
+      <LinkPopover
+        show={popoverOpen}
+        isEditing
+        source={buttonRef}
+        onDismiss={() => setPopoverOpen(false)}
+        onSave={({ text, url }) => addLink({ text, url })}
+      />
+    </>
+  );
+};
+
 const BlocksToolbar = () => {
   const modifiers = useModifiersStore();
 
@@ -310,6 +392,7 @@ const BlocksToolbar = () => {
                 handleClick={modifier.handleToggle}
               />
             ))}
+            <LinkButton />
           </Flex>
         </Toolbar.ToggleGroup>
         <Separator />

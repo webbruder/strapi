@@ -17,6 +17,8 @@ import {
 import PropTypes from 'prop-types';
 import styled, { css } from 'styled-components';
 
+import { LinkPopover } from '../LinkPopover';
+
 const H1 = styled(Typography).attrs({ as: 'h1' })`
   font-size: ${42 / 16}rem;
   line-height: ${({ theme }) => theme.lineHeights[1]};
@@ -164,6 +166,30 @@ Image.propTypes = {
   }).isRequired,
 };
 
+const Link = ({ url, children }) => {
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const linkRef = React.useRef(null);
+
+  return (
+    <>
+      <BaseLink ref={linkRef} href={url} isExternal onClick={() => setPopoverOpen(true)}>
+        {children}
+      </BaseLink>
+      <LinkPopover
+        show={popoverOpen}
+        source={linkRef}
+        url={url}
+        onDismiss={() => setPopoverOpen(false)}
+      />
+    </>
+  );
+};
+
+Link.propTypes = {
+  url: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired,
+};
+
 /**
  * Manages a store of all the available blocks.
  *
@@ -282,9 +308,9 @@ export function useBlocksStore() {
     },
     link: {
       renderElement: (props) => (
-        <BaseLink href={props.element.url} {...props.attributes}>
+        <Link url={props.element.url} {...props.attributes}>
           {props.children}
-        </BaseLink>
+        </Link>
       ),
       variants: {},
     },
