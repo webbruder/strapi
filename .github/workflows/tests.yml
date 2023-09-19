@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -179,7 +179,7 @@ jobs:
     name: '[CE] API Integration (postgres, node: ${{ matrix.node }})'
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
     services:
       postgres:
         # Docker Hub image
@@ -217,7 +217,7 @@ jobs:
     name: '[CE] API Integration (mysql:latest, client: ${{ matrix.db_client }}, node: ${{ matrix.node }})'
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
         db_client: ['mysql', 'mysql2']
     services:
       mysql:
@@ -254,7 +254,7 @@ jobs:
     name: '[CE] API Integration (mysql:5, client: ${{ matrix.db_client }} , node: ${{ matrix.node }})'
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
         db_client: ['mysql', 'mysql2']
     services:
       mysql:
@@ -290,7 +290,7 @@ jobs:
     name: '[CE] API Integration (sqlite, client: ${{ matrix.sqlite_pkg }}, node: ${{ matrix.node }})'
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
         sqlite_pkg: ['better-sqlite3', 'sqlite3']
     steps:
       - uses: actions/checkout@v4
@@ -315,7 +315,7 @@ jobs:
       STRAPI_LICENSE: ${{ secrets.strapiLicense }}
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
     services:
       postgres:
         # Docker Hub image
@@ -356,7 +356,7 @@ jobs:
       STRAPI_LICENSE: ${{ secrets.strapiLicense }}
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
         db_client: ['mysql', 'mysql2']
     services:
       mysql:
@@ -396,7 +396,7 @@ jobs:
       STRAPI_LICENSE: ${{ secrets.strapiLicense }}
     strategy:
       matrix:
-        node: [16, 18, 20]
+        node: [18, 20]
         sqlite_pkg: ['better-sqlite3', 'sqlite3']
     steps:
       - uses: actions/checkout@v4
