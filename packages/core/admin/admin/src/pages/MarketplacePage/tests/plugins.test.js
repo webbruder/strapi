@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 
 import { lightTheme, ThemeProvider } from '@strapi/design-system';
 import { NotificationsProvider } from '@strapi/helper-plugin';
