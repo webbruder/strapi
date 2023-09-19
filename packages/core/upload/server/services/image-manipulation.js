@@ -46,8 +46,13 @@ const THUMBNAIL_RESIZE_OPTIONS = {
 
 const resizeFileTo = async (file, options, { name, hash }) => {
   const filePath = join(file.tmpWorkingDirectory, hash);
+  const { format } = await getMetadata(file);
 
-  await writeStreamToFile(file.getStream().pipe(sharp().resize(options)), filePath);
+  const transformer = sharp();
+  transformer[format]({ quality: 100 });
+
+  await writeStreamToFile(file.getStream().pipe(transformer.resize(options)), filePath);
+
   const newFile = {
     name,
     hash,
@@ -96,7 +101,8 @@ const optimize = async (file) => {
   if (sizeOptimization || autoOrientation) {
     const transformer = sharp();
     // reduce image quality
-    transformer[format]({ quality: sizeOptimization ? 80 : 100 });
+    const optimizationQuality = strapi.config.get(`plugin.upload.optimizationQuality`, 80);
+    transformer[format]({ quality: sizeOptimization ? optimizationQuality : 100 });
     // rotate image based on EXIF data
     if (autoOrientation) {
       transformer.rotate();
