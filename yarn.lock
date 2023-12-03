@@ -5207,19 +5207,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/test@npm:1.37.0-alpha-jul-20-2023":
-  version: 1.37.0-alpha-jul-20-2023
-  resolution: "@playwright/test@npm:1.37.0-alpha-jul-20-2023"
+"@playwright/test@npm:1.40.1":
+  version: 1.40.1
+  resolution: "@playwright/test@npm:1.40.1"
   dependencies:
-    "@types/node": "*"
-    fsevents: 2.3.2
-    playwright-core: 1.37.0-alpha-jul-20-2023
-  dependenciesMeta:
-    fsevents:
-      optional: true
+    playwright: 1.40.1
   bin:
     playwright: cli.js
-  checksum: 1bd4a3a9b6b53fe923917ba8dce3c7d89949bc04028d4b0d87e9681f119441b5c8e455fada13f7024a65f4fcb7ec794e9ead567f148d67cd246dd1b1198d00d5
+  checksum: ae094e6cb809365c0707ee2b184e42d2a2542569ada020d2d44ca5866066941262bd9a67af185f86c2fb0133c9b712ea8cb73e2959a289e4261c5fd17077283c
   languageName: node
   linkType: hard
 
@@ -7776,6 +7771,7 @@ __metadata:
     styled-components: 5.3.3
     yup: 0.32.9
   peerDependencies:
+    "@strapi/strapi": 4.12.4
     react: ^17.0.0 || ^18.0.0
     react-dom: ^17.0.0 || ^18.0.0
     react-router-dom: 5.3.4
@@ -25133,12 +25129,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.37.0-alpha-jul-20-2023":
-  version: 1.37.0-alpha-jul-20-2023
-  resolution: "playwright-core@npm:1.37.0-alpha-jul-20-2023"
+"playwright-core@npm:1.40.1":
+  version: 1.40.1
+  resolution: "playwright-core@npm:1.40.1"
   bin:
     playwright-core: cli.js
-  checksum: ab00bd1a66715ee15b3061a910bdb02466f51524e1342d01e31069069a0c47c20d667d62cf92042774b80dabe74333c38bf5b4caa3ba560aa85a4eaf89b826d8
+  checksum: 84d92fb9b86e3c225b16b6886bf858eb5059b4e60fa1205ff23336e56a06dcb2eac62650992dede72f406c8e70a7b6a5303e511f9b4bc0b85022ede356a01ee0
+  languageName: node
+  linkType: hard
+
+"playwright@npm:1.40.1":
+  version: 1.40.1
+  resolution: "playwright@npm:1.40.1"
+  dependencies:
+    fsevents: 2.3.2
+    playwright-core: 1.40.1
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    playwright: cli.js
+  checksum: 9e36791c1b4a649c104aa365fdd9d049924eeb518c5967c0e921aa38b9b00994aa6ee54784d6c2af194b3b494b6f69772673081ef53c6c4a4b2065af9955c4ba
   languageName: node
   linkType: hard
 
@@ -28371,7 +28382,7 @@ __metadata:
     "@babel/core": ^7.20.12
     "@babel/eslint-parser": ^7.19.1
     "@babel/preset-react": 7.18.6
-    "@playwright/test": 1.37.0-alpha-jul-20-2023
+    "@playwright/test": 1.40.1
     "@strapi/admin-test-utils": "workspace:*"
     "@strapi/eslint-config": 0.2.0
     "@swc/cli": 0.1.62
