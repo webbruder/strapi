@@ -7150,7 +7150,7 @@ __metadata:
     "@strapi/data-transfer": 4.13.6
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/permissions": 4.13.6
     "@strapi/provider-audit-logs-local": 4.13.6
     "@strapi/typescript-utils": 4.13.6
@@ -7398,7 +7398,7 @@ __metadata:
     "@storybook/react-vite": 7.4.0
     "@strapi/admin-test-utils": 4.13.6
     "@strapi/design-system": 1.10.1
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@testing-library/react": 14.0.0
     "@testing-library/user-event": 14.4.3
     "@types/react": 18.2.7
@@ -7437,7 +7437,7 @@ __metadata:
     yup: 0.32.9
   peerDependencies:
     "@strapi/design-system": 1.10.1
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     react: ^17.0.0 || ^18.0.0
     react-dom: ^17.0.0 || ^18.0.0
     react-router-dom: ^5.3.4
@@ -7445,13 +7445,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@strapi/icons@npm:1.10.1":
-  version: 1.10.1
-  resolution: "@strapi/icons@npm:1.10.1"
+"@strapi/icons@npm:1.13.2":
+  version: 1.13.2
+  resolution: "@strapi/icons@npm:1.13.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
     react-dom: ^17.0.0 || ^18.0.0
-  checksum: 42df6a71acd66962b0d21ade34de083a1f98ae147d3849cbd195b17565500d93df07fc08ec9b9d1b3b8576700d5f1f2aa3421724ae7ac53a292b0f952b4caa3e
+  checksum: eb621b161a81950404aa0d68e0d21fc1cf22bc7887636d71ae5eab2869051cc71bbd98b83a1c37fa405fc23dc1d3c7a4c6566406f353212f73a6abac28380113
   languageName: node
   linkType: hard
 
@@ -7509,7 +7509,7 @@ __metadata:
   dependencies:
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/strapi": 4.13.6
     "@testing-library/react": 14.0.0
     "@testing-library/user-event": 14.4.3
@@ -7551,7 +7551,7 @@ __metadata:
     "@strapi/design-system": 1.10.1
     "@strapi/generators": 4.13.6
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/utils": 4.13.6
     "@testing-library/react": 14.0.0
     "@testing-library/react-hooks": 8.0.1
@@ -7587,7 +7587,7 @@ __metadata:
     "@apidevtools/swagger-parser": ^10.1.0
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/utils": 4.13.6
     "@testing-library/react": 14.0.0
     "@testing-library/user-event": 14.4.3
@@ -7625,7 +7625,7 @@ __metadata:
   dependencies:
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/provider-email-sendmail": 4.13.6
     "@strapi/utils": 4.13.6
     "@testing-library/react": 14.0.0
@@ -7655,7 +7655,7 @@ __metadata:
     "@graphql-tools/utils": ^8.13.1
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/utils": 4.13.6
     apollo-server-core: 3.12.1
     apollo-server-koa: 3.10.0
@@ -7690,7 +7690,7 @@ __metadata:
   dependencies:
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/utils": 4.13.6
     "@testing-library/react": 14.0.0
     formik: 2.4.0
@@ -7723,7 +7723,7 @@ __metadata:
     "@sentry/node": 6.19.7
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     react: ^18.2.0
     react-dom: ^18.2.0
     react-router-dom: 5.3.4
@@ -7743,7 +7743,7 @@ __metadata:
   dependencies:
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/provider-upload-local": 4.13.6
     "@strapi/utils": 4.13.6
     "@testing-library/dom": 9.2.0
@@ -7776,6 +7776,7 @@ __metadata:
     styled-components: 5.3.3
     yup: 0.32.9
   peerDependencies:
+    "@strapi/strapi": 4.12.4
     react: ^17.0.0 || ^18.0.0
     react-dom: ^17.0.0 || ^18.0.0
     react-router-dom: 5.3.4
@@ -7789,7 +7790,7 @@ __metadata:
   dependencies:
     "@strapi/design-system": 1.10.1
     "@strapi/helper-plugin": 4.13.6
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/utils": 4.13.6
     "@testing-library/dom": 9.2.0
     "@testing-library/react": 14.0.0
@@ -16946,7 +16947,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "getstarted@workspace:examples/getstarted"
   dependencies:
-    "@strapi/icons": 1.10.1
+    "@strapi/icons": 1.13.2
     "@strapi/plugin-color-picker": 4.13.6
     "@strapi/plugin-documentation": 4.13.6
     "@strapi/plugin-graphql": 4.13.6
